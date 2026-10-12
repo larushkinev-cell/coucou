@@ -458,6 +458,33 @@ mod tests {
     }
 
     #[test]
+    fn a_dropped_image_rides_along_as_an_image_url() {
+        let path = std::env::temp_dir().join("coucou-local-chat-image.png");
+        std::fs::write(&path, b"\x89PNG\r\n\x1a\n").unwrap();
+        let context = ChatContext::File { name: "shot.png".into(), path: path.to_string_lossy().into_owned() };
+        let content = user_text(true, Some(&context), "what is this?");
+        let parts = content.as_array().expect("a file turn sends content blocks");
+        assert_eq!(parts[0]["type"], "image_url");
+        assert!(parts[0]["image_url"]["url"].as_str().unwrap().starts_with("data:image/png;base64,"));
+        assert_eq!(parts[1]["text"], "File: shot.png");
+        assert_eq!(parts[2]["text"], "what is this?");
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn a_text_file_stays_inline_and_only_the_first_turn_carries_it() {
+        let path = std::env::temp_dir().join("coucou-local-chat-note.txt");
+        std::fs::write(&path, "hello").unwrap();
+        let context = ChatContext::File { name: "note.txt".into(), path: path.to_string_lossy().into_owned() };
+        let parts = user_text(true, Some(&context), "q");
+        let parts = parts.as_array().expect("a file turn sends content blocks");
+        assert_eq!(parts.len(), 2);
+        assert!(parts[0]["text"].as_str().unwrap().contains("File contents:"));
+        assert!(user_text(false, Some(&context), "q").is_string(), "the file rides with the first message only");
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
     fn a_key_is_sent_as_the_bearer_and_without_one_the_placeholder_is() {
         assert_eq!(bearer(Some("sk-abc")), "Bearer sk-abc");
         assert_eq!(bearer(Some("")), "Bearer ollama");
