@@ -98,6 +98,7 @@ pub enum Agent {
     Codex,
     Copilot,
     Muse,
+    Dsh,
     OpenCode,
     Amp,
     Hermes,
@@ -108,6 +109,7 @@ impl Agent {
         Agent::Codex,
         Agent::Copilot,
         Agent::Muse,
+        Agent::Dsh,
         Agent::Gemini,
         Agent::Antigravity,
         Agent::Cursor,
@@ -125,6 +127,7 @@ impl Agent {
             Agent::Codex => "codex",
             Agent::Copilot => "copilot",
             Agent::Muse => "muse",
+            Agent::Dsh => "dsh",
             Agent::OpenCode => "opencode",
             Agent::Amp => "amp",
             Agent::Hermes => "hermes",
@@ -144,6 +147,9 @@ impl Agent {
             Agent::Codex => vec![home.join(".codex").join("hooks.json")],
             Agent::Copilot => vec![home.join(".copilot").join("hooks").join("coucou.json")],
             Agent::Muse => vec![home.join(".config").join("muse").join("settings.json")],
+            // dsh reads this file through its own hooks-claude-code bridge
+            // (configPath in the dsh profile).
+            Agent::Dsh => vec![home.join(".dsh").join("hooks.json")],
             // OpenCode and Amp read ~/.config on Windows too.
             Agent::OpenCode => vec![home.join(".config").join("opencode").join("plugins").join("coucou.js")],
             Agent::Amp => vec![home.join(".config").join("amp").join("plugins").join("coucou.ts")],
@@ -218,6 +224,11 @@ impl Agent {
                     .collect();
                 Box::new(move |v| copilot_install(v, &entries).map(Some))
             }
+            (Agent::Dsh, false) => Box::new(|v| groups_uninstall(v, "dsh").map(Some)),
+            (Agent::Dsh, true) => {
+                let command = relay.command(Shell::Sh, "--agent dsh");
+                Box::new(move |v| dsh_install(v, &command).map(Some))
+            }
             (Agent::Muse, false) => Box::new(|v| groups_uninstall(v, "muse").map(Some)),
             (Agent::Muse, true) => {
                 let commands: Vec<(String, String, u64)> = MUSE_EVENTS
@@ -260,6 +271,7 @@ impl Agent {
                 .and_then(Value::as_object)
                 .is_some_and(|h| h.values().filter_map(Value::as_array).flatten().any(copilot_entry_is_ours)),
             Agent::Muse => groups_have_ours(&json(), "muse"),
+            Agent::Dsh => groups_have_ours(&json(), "dsh"),
             Agent::OpenCode | Agent::Amp | Agent::Hermes => false,
         }
     }
@@ -284,6 +296,7 @@ impl Agent {
             Agent::Codex => "Codex",
             Agent::Copilot => "GitHub Copilot CLI",
             Agent::Muse => "Muse Code",
+            Agent::Dsh => "DeepSeek Harness",
             Agent::OpenCode => "OpenCode",
             Agent::Amp => "Amp",
             Agent::Hermes => "Hermes Agent",
@@ -300,6 +313,7 @@ impl Agent {
             Agent::Codex => t("Codex runs new hooks only once you trust them: start Codex and review them once with /hooks."),
             Agent::Copilot => t("Start a new Copilot CLI session to pick the hooks up."),
             Agent::Muse => t("Start a new Muse Code session to pick the hooks up."),
+            Agent::Dsh => t("Turn the dsh hook bridge on once (hooks-claude-code in the dsh profile), then start a new dsh session."),
             Agent::OpenCode => t("Restart OpenCode to load the plugin."),
             Agent::Amp => t("Restart Amp to load the plugin."),
             Agent::Hermes => t("Turn it on once with `hermes plugins enable coucou`, then start a new Hermes session."),
@@ -623,6 +637,34 @@ fn codex_install(root: &Value, command: &str) -> Result<Value, String> {
         (event.to_string(), json!({ "hooks": [hook] }))
     });
     groups_install(root, "codex", events).map(Value::Object)
+}
+
+// ── DeepSeek Harness — ~/.dsh/hooks.json ──────────────────────────────────────
+//
+// Claude-style groups, timeouts in seconds. dsh ships the other side of this
+// file as its own bridge (`@deepseek-ai/dsh-hooks-claude-code`): the dsh profile
+// points that bridge at this path and dsh then runs the relay for its session,
+// prompt and tool events, sending the event name in the payload like Codex.
+// dsh's bridge has no PermissionRequest event — it asks before running a tool
+// instead — so the island shows the session and its tools, and dsh keeps its
+// own approvals (#dsh).
+
+const DSH_EVENTS: &[(&str, u64)] = &[
+    ("SessionStart", 10),
+    ("UserPromptSubmit", 10),
+    ("PreToolUse", 10),
+    ("PostToolUse", 10),
+    ("Stop", 10),
+    ("SubagentStart", 10),
+    ("SubagentStop", 10),
+];
+
+fn dsh_install(root: &Value, command: &str) -> Result<Value, String> {
+    let events = DSH_EVENTS.iter().map(|(event, timeout)| {
+        let hook = json!({ "type": "command", "command": command, "timeout": timeout });
+        (event.to_string(), json!({ "hooks": [hook] }))
+    });
+    groups_install(root, "dsh", events).map(Value::Object)
 }
 
 // ── GitHub Copilot CLI — ~/.copilot/hooks/coucou.json ─────────────────────────
@@ -1186,6 +1228,24 @@ mod tests {
         let existing = r#"{"model":"m","hooks":{"Stop":[{"matcher":"*","hooks":[{"type":"command","command":"say done"}]}]}}"#;
         let (home, installed, removed) = round_trip(Agent::Muse, Some(existing));
         assert!(installed.get("schema_version").is_none());
+        assert_eq!(removed.unwrap(), serde_json::from_str::<Value>(existing).unwrap());
+        let _ = std::fs::remove_dir_all(home);
+    }
+
+    #[test]
+    fn dsh_gets_claude_style_groups_in_its_own_hooks_file() {
+        let (home, installed, removed) = round_trip(Agent::Dsh, None);
+        assert_eq!(installed["hooks"].as_object().unwrap().len(), DSH_EVENTS.len());
+        assert_eq!(installed["hooks"]["PreToolUse"][0]["hooks"][0]["timeout"], 10);
+        let command = installed["hooks"]["SessionStart"][0]["hooks"][0]["command"].as_str().unwrap();
+        assert!(command.ends_with("--agent dsh"), "{command}");
+        // A file Coucou alone wrote stays behind, empty, once its groups go.
+        assert_eq!(removed.unwrap(), json!({}));
+        let _ = std::fs::remove_dir_all(home);
+
+        // A file someone else already uses keeps everything but our groups.
+        let existing = r#"{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}"#;
+        let (home, _, removed) = round_trip(Agent::Dsh, Some(existing));
         assert_eq!(removed.unwrap(), serde_json::from_str::<Value>(existing).unwrap());
         let _ = std::fs::remove_dir_all(home);
     }

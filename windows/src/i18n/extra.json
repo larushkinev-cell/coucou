@@ -3899,6 +3899,9 @@
    "pt-BR": "Este código também inclui a chave de acesso e a chave de ponta a ponta do relay {host}. «Parear de novo» cria uma chave e uma sala novas.",
    "ru": "Этот код также содержит ключ доступа и сквозной ключ для ретранслятора {host}. «Сопрячь заново» создаёт новый ключ и новую комнату.",
    "id": "Kode ini juga memuat kunci akses dan kunci ujung ke ujung untuk relay {host}. «Sandingkan ulang» membuat kunci dan ruang baru."
+  },
+  "Turn the dsh hook bridge on once (hooks-claude-code in the dsh profile), then start a new dsh session.": {
+   "ru": "Один раз включите hook-мост dsh (hooks-claude-code в профиле dsh), затем начните новую сессию dsh."
   }
  }
 }
