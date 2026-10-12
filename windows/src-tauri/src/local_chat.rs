@@ -236,13 +236,25 @@ fn read_prefix(path: &str, limit: usize) -> Option<String> {
     }
 }
 
-fn user_text(first: bool, context: Option<&ChatContext>, query: &str) -> String {
+/// The first message of a turn: the file or window the user dropped rides along
+/// with it. An image goes as an `image_url` data URL — the same part the cloud
+/// (OpenAI-compatible) path sends — because a local server that speaks the
+/// OpenAI API takes it; every other file stays by name, and inline when it is text.
+fn user_text(first: bool, context: Option<&ChatContext>, query: &str) -> Value {
     match context.filter(|_| first) {
-        Some(ChatContext::File { name, path }) => format!("{}\n\n{query}", file_note(name, path)),
-        Some(ChatContext::Window { app_name, title, url }) => {
-            format!("{}\n\n{query}", chat::window_line(app_name, title, url.as_deref()))
+        Some(ChatContext::File { name, path }) => {
+            let mut parts: Vec<Value> = Vec::new();
+            if let Some(crate::openai_compat::FilePart::Image(block)) = crate::openai_compat::file_part(path) {
+                parts.push(block);
+            }
+            parts.push(json!({ "type": "text", "text": file_note(name, path) }));
+            parts.push(json!({ "type": "text", "text": query }));
+            Value::Array(parts)
         }
-        None => query.to_string(),
+        Some(ChatContext::Window { app_name, title, url }) => {
+            json!(format!("{}\n\n{query}", chat::window_line(app_name, title, url.as_deref())))
+        }
+        None => json!(query),
     }
 }
 
