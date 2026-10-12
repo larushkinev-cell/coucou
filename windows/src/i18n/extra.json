@@ -3901,7 +3901,15 @@
    "id": "Kode ini juga memuat kunci akses dan kunci ujung ke ujung untuk relay {host}. «Sandingkan ulang» membuat kunci dan ruang baru."
   },
   "Turn the dsh hook bridge on once (hooks-claude-code in the dsh profile), then start a new dsh session.": {
-   "ru": "Один раз включите hook-мост dsh (hooks-claude-code в профиле dsh), затем начните новую сессию dsh."
+   "zh-Hans": "先启用一次 dsh 的 hook 桥接（dsh 配置里的 hooks-claude-code），然后开始新的 dsh 会话。",
+   "hi": "एक बार dsh का हुक ब्रिज चालू करें (dsh प्रोफ़ाइल में hooks-claude-code), फिर नया dsh सत्र शुरू करें।",
+   "es": "Activa una vez el puente de hooks de dsh (hooks-claude-code en el perfil de dsh) y luego inicia una nueva sesión de dsh.",
+   "ar": "شغّل جسر الخطافات في dsh مرة واحدة (hooks-claude-code في ملف تعريف dsh)، ثم ابدأ جلسة dsh جديدة.",
+   "fr": "Activez une fois le pont de hooks de dsh (hooks-claude-code dans le profil dsh), puis lancez une nouvelle session dsh.",
+   "bn": "একবার dsh-এর হুক ব্রিজ চালু করুন (dsh প্রোফাইলে hooks-claude-code), তারপর নতুন dsh সেশন শুরু করুন।",
+   "pt-BR": "Ative uma vez a ponte de hooks do dsh (hooks-claude-code no perfil do dsh) e inicie uma nova sessão do dsh.",
+   "ru": "Один раз включите hook-мост dsh (hooks-claude-code в профиле dsh), затем начните новую сессию dsh.",
+   "id": "Aktifkan sekali jembatan hook dsh (hooks-claude-code di profil dsh), lalu mulai sesi dsh baru."
   }
  }
 }

@@ -56,6 +56,7 @@ struct PillDefinition {
         case "integration_claude": return "Claude Code"
         case "agent_cursor":       return "Cursor"
         case "agent_codex":        return "Codex"
+        case "agent_dsh":          return "DeepSeek Harness"
         case "agent_hermes":       return "Hermes"
         case "agent_claude-desktop": return "Claude Desktop"
         default:                   return "Agent"
@@ -76,6 +77,8 @@ enum PillCatalog {
         .init(id: "agent_antigravity",   name: "Antigravity", color: "#E879F9",
               category: .workspace, subtitle: "Integration",  source: .agent,  githubOnly: true),
         .init(id: "agent_codex",         name: "Codex",       color: "#2DD4BF",
+              category: .workspace, subtitle: "Integration",  source: .agent,  githubOnly: true),
+        .init(id: "agent_dsh",           name: "DeepSeek Harness", color: "#4D6BFE",
               category: .workspace, subtitle: "Integration",  source: .agent,  githubOnly: true),
         // ── Agents ───────────────────────────────────────────────────────────
         .init(id: "agent_gemini",        name: "Gemini CLI",  color: "#8AB4F8",

@@ -81,6 +81,10 @@ export const PILL_CATALOG: readonly PillDefinition[] = [
     subtitle: N_("Integration"), source: "agent", support: "yes", connect: hooks },
   { id: "agent_codex", name: "Codex", color: "#2DD4BF", category: "workspace",
     subtitle: N_("Integration"), source: "agent", support: "yes", connect: hooks },
+  // DeepSeek Harness: its own row in Settings → Agents writes ~/.dsh/hooks.json,
+  // and dsh runs the relay through its hooks-claude-code bridge.
+  { id: "agent_dsh", name: "DeepSeek Harness", color: "#4D6BFE", category: "workspace",
+    subtitle: N_("Integration"), source: "agent", support: "yes", connect: hooks },
   // ── Agents ─────────────────────────────────────────────────────────────────
   { id: "agent_gemini", name: "Gemini CLI", color: "#8AB4F8", category: "agent",
     subtitle: N_("Agent"), source: "agent", support: "yes", connect: hooks },
@@ -179,6 +183,7 @@ export function sessionSubtitle(id: string): string {
     case "integration_claude": return "Claude Code";
     case "agent_cursor": return "Cursor";
     case "agent_codex": return "Codex";
+    case "agent_dsh": return "DeepSeek Harness";
     case "agent_hermes": return "Hermes";
     case "agent_claude-desktop": return "Claude Desktop";
     default: return N_("Agent");
